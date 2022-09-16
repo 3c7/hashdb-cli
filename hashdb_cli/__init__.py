@@ -8,7 +8,7 @@ from typer import Typer
 app = Typer()
 sess = requests.Session()
 sess.headers.update({
-    "User-Agent": "hashdb-cli/0.1.0"
+    "User-Agent": "hashdb-cli/0.1.1"
 })
 
 
@@ -86,17 +86,19 @@ def hunt(
 
 @app.command()
 def resolve(
-        hash: str = typer.Argument(..., help="Hash to resolve."),
+        hashes: List[str] = typer.Argument(..., help="Hash to resolve."),
         hex: bool = typer.Option(False, "-h", "--hex", help="Given hashes are in hex notation."),
         verbose: bool = typer.Option(False, "-v", "--verbose", help="Dump responses")
 ) -> None:
     """Try to hunt for a single hash and grab the string afterwards."""
-    if not hex:
-        hash = int(hash, 10)
-    else:
-        hash = int(hash, 16)
+    hash_data = []
+    for h in hashes:
+        if hex:
+            hash_data.append(int(h, 16))
+        else:
+            hash_data.append(int(h, 10))
 
-    response = sess.post("https://hashdb.openanalysis.net/hunt", json={"hashes": [hash]})
+    response = sess.post("https://hashdb.openanalysis.net/hunt", json={"hashes": hash_data})
 
     if response.status_code != 200:
         typer.echo("Response code was not 200 - probably algorithm or hash missing.", file=stderr)
@@ -108,20 +110,51 @@ def resolve(
     if len(data) == 0:
         typer.echo("No hash found.")
     elif len(data) > 1:
-        typer.echo("Multiple algorithms produce this hash.")
+        typer.echo("Multiple algorithms produce this hash(es).")
     else:
-        response = sess.get(f"https://hashdb.openanalysis.net/hash/{data[0].get('algorithm')}/{hash}")
+        for h in hash_data:
+            response = sess.get(f"https://hashdb.openanalysis.net/hash/{data[0].get('algorithm')}/{h}")
 
-        if response.status_code != 200:
-            typer.echo("Response code was not 200 - probably algorithm or hash missing.", file=stderr)
+            if response.status_code != 200:
+                typer.echo("Response code was not 200 - probably algorithm or hash missing.", file=stderr)
 
-        if verbose:
-            typer.echo(response.json())
+            if verbose:
+                typer.echo(response.json())
 
-        data = response.json()
+            string_data = response.json()
 
-        for result in data.get("hashes", []):
-            typer.echo(f"{result.get('hash')}: {result.get('string', {}).get('string')}")
+            for result in string_data.get("hashes", []):
+                typer.echo(f"{result.get('hash')}: {result.get('string', {}).get('string')}")
+
+
+@app.command()
+def add(
+        string: str = typer.Argument(..., help="String to add to HashDB."),
+        verbose: bool = typer.Option(False, "-v", "--verbose", help="Dump responses")
+) -> None:
+    """Add a new string to hashdb"""
+    response = sess.post("https://hashdb.openanalysis.net/string", json={"string": string})
+
+    if response.status_code != 200:
+        typer.echo("Response code was not 200 - probably algorithm or hash missing.", file=stderr)
+
+    if verbose:
+        typer.echo(response.json())
+
+    if response.status_code == 200:
+        typer.echo(f"String {string} was added or was already given in database.")
+
+
+@app.command()
+def string(
+        string: str = typer.Argument(..., help="String to add to HashDB.")
+) -> None:
+    """Get information about a string which is already available in the database."""
+    response = sess.get(f"https://hashdb.openanalysis.net/string/{string}")
+    if response.status_code != 200:
+        typer.echo("Response code was not 200 - probably algorithm or hash missing.", file=stderr)
+
+    typer.echo(response.json())
 
 
 if __name__ == "__main__":
