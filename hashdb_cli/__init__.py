@@ -35,26 +35,30 @@ def algorithms(
 @app.command()
 def get(
         algorithm: str = typer.Argument(..., help="The algorithm to use for lookup."),
-        hash: str = typer.Argument(..., help="The hash to use for lookup."),
+        hashes: List[str] = typer.Argument(..., help="List of hashes to lookup"),
         hex: bool = typer.Option(False, "-h", "--hex", help="Given hash is in hex notation."),
         verbose: bool = typer.Option(False, "-v", "--verbose", help="Dump responses")
 ) -> None:
     """Get original strings for a given algorithm and a hash."""
-    if not hex:
-        hash = int(hash, 10)
-    else:
-        hash = int(hash, 16)
-    response = sess.get(f"https://hashdb.openanalysis.net/hash/{algorithm}/{hash}")
+    data = []
+    for h in hashes:
+        if hex:
+            data.append(int(h, 16))
+        else:
+            data.append(int(h, 10))
 
-    if response.status_code != 200:
-        typer.echo("Response code was not 200 - probably algorithm or hash missing.", file=stderr)
+    for h in data:
+        response = sess.get(f"https://hashdb.openanalysis.net/hash/{algorithm}/{h}")
 
-    if verbose:
-        typer.echo(response.json())
+        if response.status_code != 200:
+            typer.echo("Response code was not 200 - probably algorithm or hash missing.", file=stderr)
 
-    data = response.json()
-    for result in data.get("hashes", []):
-        typer.echo(f"{result.get('hash')}: {result.get('string', {}).get('string')}")
+        if verbose:
+            typer.echo(response.json())
+
+        response_data = response.json()
+        for result in response_data.get("hashes", []):
+            typer.echo(f"{result.get('hash')}: {result.get('string', {}).get('string')}")
 
 
 @app.command()
