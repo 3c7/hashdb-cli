@@ -39,7 +39,7 @@ hashdb algorithms (--description)
 Hashdb requires the hash to be an unsigned integer, however, hex strings can be used in combination with `-h/--hex` parameter.
 
 ```
-hashdb get (--hex) <algo_name> <hash>
+hashdb get <algo_name> <h1> <h2> <h3> ... <hn> (--hex)
 ```
 
 ### Hunt
@@ -53,7 +53,7 @@ hashdb hunt <h1> <h2> <h3> ... <hn> (--hex)
 Combination of hunt and get.
 
 ```
-hashdb resolve <h1> ... <hn>
+hashdb resolve <h1> ... <hn> (--hex)
 ```
 
 ### String
