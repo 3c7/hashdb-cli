@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "hashdb-cli"
-version = "0.1.1"
+version = "0.1.2"
 description = "Access the open analysis hashdb via cli"
 authors = ["3c7 <3c7@posteo.de>"]
 license = "MIT"
